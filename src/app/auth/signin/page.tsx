@@ -127,7 +127,9 @@ export default function SignInPage() {
                 border: '2px solid #e5e7eb',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
-                transition: 'all 0.3s'
+                transition: 'all 0.3s',
+                color: '#111827',
+                backgroundColor: '#ffffff'
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = '#1e40af'
@@ -161,7 +163,9 @@ export default function SignInPage() {
                 border: '2px solid #e5e7eb',
                 borderRadius: '0.5rem',
                 fontSize: '1rem',
-                transition: 'all 0.3s'
+                transition: 'all 0.3s',
+                color: '#111827',
+                backgroundColor: '#ffffff'
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = '#1e40af'
