@@ -1,0 +1,531 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          String    @default("admin")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Social Media Credentials
+  linkedinEmail     String?
+  linkedinPassword  String?
+  instagramEmail    String?
+  instagramPassword String?
+  facebookEmail     String?
+  facebookPassword  String?
+  youtubeEmail      String?
+  youtubePassword   String?
+
+  // Microsoft Integration
+  microsoftAccessToken  String?
+  microsoftRefreshToken String?
+  microsoftEmail        String?
+
+  // Twilio Settings
+  twilioAccountSid String?
+  twilioAuthToken  String?
+  twilioFromNumber String?
+
+  // Email Settings
+  emailProvider    String?
+  emailHost        String?
+  emailPort        Int?
+  emailUser        String?
+  emailPassword    String?
+
+  prospects        Prospect[]
+  appointments     Appointment[]
+  posts            SocialPost[]
+  campaigns        Campaign[]
+  notifications    Notification[]
+  proposals        Proposal[]
+  proposalTemplates ProposalTemplate[]
+  followUpSequences FollowUpSequence[]
+  emailTemplates   EmailTemplate[]
+  agents           Agent[]
+}
+
+model Agent {
+  id              String    @id @default(cuid())
+  name            String    // "Training Program Agent", "F&I Products Agent"
+  slug            String    @unique // "training-agent", "fi-products-agent"
+  description     String?
+  persona         String    // AI persona/voice for this agent
+  targetAudience  String    // Who this agent targets
+  products        Json      // Products/services this agent sells
+  active          Boolean   @default(true)
+  color           String    @default("#3b82f6") // For UI differentiation
+  icon            String?   // Icon identifier
+  settings        Json?     // Agent-specific settings
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  prospects       Prospect[]
+  campaigns       Campaign[]
+  emailTemplates  EmailTemplate[]
+  followUpSequences FollowUpSequence[]
+  proposalTemplates ProposalTemplate[]
+
+  @@index([active])
+  @@index([slug])
+}
+
+model Prospect {
+  id              String    @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  company         String?
+  position        String?
+  linkedinUrl     String?
+  facebookUrl     String?
+  twitterUrl      String?
+  source          String    // "cold_list", "linkedin", "referral", "web_scraping", "csv_import", etc.
+  status          ProspectStatus @default(COLD)
+  industry        String?
+  dealership      String?
+  dealershipWebsite String?
+  location        String?
+  employeeCount   Int?
+  revenue         String?
+  notes           String?
+  lastContactDate DateTime?
+  nextFollowUp    DateTime?
+  enriched        Boolean   @default(false)
+  enrichedAt      DateTime?
+  leadScore       Int       @default(0) // Lead scoring 0-100
+  linkedinData    Json?     // Enriched LinkedIn profile data
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  agentId         String?
+  agent           Agent?    @relation(fields: [agentId], references: [id])
+
+  interactions    Interaction[]
+  appointments    Appointment[]
+  proposals       Proposal[]
+  sequenceEnrollments SequenceEnrollment[]
+
+  @@index([status])
+  @@index([nextFollowUp])
+  @@index([enriched])
+  @@index([agentId])
+  @@index([leadScore])
+}
+
+enum ProspectStatus {
+  COLD
+  CONTACTED
+  INTERESTED
+  APPOINTMENT_SET
+  PROPOSAL_SENT
+  CLOSED_WON
+  CLOSED_LOST
+  DO_NOT_CONTACT
+}
+
+model Interaction {
+  id          String         @id @default(cuid())
+  type        InteractionType
+  content     String?
+  result      String?
+  scheduledAt DateTime?
+  completedAt DateTime?
+  successful  Boolean?
+  notes       String?
+  createdAt   DateTime       @default(now())
+
+  prospectId  String
+  prospect    Prospect       @relation(fields: [prospectId], references: [id])
+
+  @@index([type])
+  @@index([scheduledAt])
+}
+
+enum InteractionType {
+  EMAIL
+  LINKEDIN_MESSAGE
+  LINKEDIN_CONNECTION
+  PHONE_CALL
+  SOCIAL_MEDIA_COMMENT
+  SOCIAL_MEDIA_POST
+  MEETING
+}
+
+model Appointment {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+  meetingLink String?
+  location    String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  prospectId  String
+  prospect    Prospect  @relation(fields: [prospectId], references: [id])
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([startTime])
+  @@index([status])
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  type        CampaignType
+  status      CampaignStatus @default(DRAFT)
+  targetAudience String?
+  content     String?
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  stats       Json?     // Campaign statistics (sent, opened, clicked, replied)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  agentId     String?
+  agent       Agent?    @relation(fields: [agentId], references: [id])
+
+  posts       SocialPost[]
+}
+
+enum CampaignType {
+  LINKEDIN_OUTREACH
+  EMAIL_SEQUENCE
+  SOCIAL_MEDIA
+  PHONE_CAMPAIGN
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model SocialPost {
+  id          String     @id @default(cuid())
+  platform    Platform
+  content     String
+  mediaUrl    String?
+  mediaType   String?
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  status      PostStatus @default(DRAFT)
+  engagement  Json?      // likes, comments, shares, etc.
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+
+  campaignId  String?
+  campaign    Campaign?  @relation(fields: [campaignId], references: [id])
+
+  @@index([platform])
+  @@index([scheduledAt])
+}
+
+enum Platform {
+  LINKEDIN
+  INSTAGRAM
+  FACEBOOK
+  YOUTUBE
+  TWITTER
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model VideoContent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  filename    String
+  url         String
+  thumbnail   String?
+  duration    Int?      // in seconds
+  size        Int?      // in bytes
+  format      String?
+  tags        String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tags])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  APPOINTMENT_SCHEDULED
+  APPOINTMENT_REMINDER
+  PROSPECT_RESPONDED
+  CAMPAIGN_COMPLETED
+  SYSTEM_ALERT
+}
+
+model KnowledgeBase {
+  id          String   @id @default(cuid())
+  category    String
+  title       String
+  content     String
+  tags        String[]
+  version     String   @default("1.0")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([tags])
+}
+
+model AIConversation {
+  id          String    @id @default(cuid())
+  prospectId  String?
+  context     String    // "prospecting", "appointment_setting", "follow_up"
+  messages    Json      // Array of conversation messages
+  summary     String?
+  outcome     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([prospectId])
+  @@index([context])
+}
+
+model Proposal {
+  id              String         @id @default(cuid())
+  title           String
+  content         String         // AI-generated proposal content
+  personalizedPitch String?      // Personalized pitch section
+  roiCalculation  Json?          // ROI calculation data
+  trainingProgram String?        // Supreme One training program details
+  status          ProposalStatus @default(DRAFT)
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  viewCount       Int            @default(0)
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  followUpCount   Int            @default(0)
+  lastFollowUp    DateTime?
+  expiresAt       DateTime?
+  metadata        Json?          // Additional data like pricing, packages, etc.
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  prospectId      String
+  prospect        Prospect       @relation(fields: [prospectId], references: [id])
+
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+
+  templateId      String?
+  template        ProposalTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([status])
+  @@index([sentAt])
+  @@index([prospectId])
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model ProposalTemplate {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  subject     String?   // Email subject line
+  template    String    // Template with placeholders like {{firstName}}, {{dealership}}, etc.
+  pitchTemplate String? // Template for personalized pitch
+  roiTemplate String?   // Template for ROI calculation
+  active      Boolean   @default(true)
+  category    String?   // "dealership_owner", "gm", "president", etc.
+  metadata    Json?     // Variables, settings, etc.
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  agentId     String?
+  agent       Agent?    @relation(fields: [agentId], references: [id])
+
+  proposals   Proposal[]
+
+  @@index([active])
+  @@index([category])
+}
+
+model FollowUpSequence {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean   @default(true)
+  triggerEvent String   // "proposal_sent", "no_response_7days", "viewed_not_accepted", etc.
+  delayDays   Int       @default(0) // Days to wait before starting sequence
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  agentId     String?
+  agent       Agent?    @relation(fields: [agentId], references: [id])
+
+  steps       FollowUpStep[]
+  enrollments SequenceEnrollment[]
+
+  @@index([active])
+  @@index([triggerEvent])
+}
+
+model FollowUpStep {
+  id          String       @id @default(cuid())
+  stepNumber  Int          // Order in sequence (1, 2, 3, etc.)
+  name        String
+  type        FollowUpType
+  delayDays   Int          // Days after previous step (or sequence start for step 1)
+  delayHours  Int          @default(0) // Additional hours for precise timing
+  subject     String?      // For emails
+  content     String       // Email body, LinkedIn message, etc.
+  channel     String       // "email", "linkedin", "sms", "phone", etc.
+  aiGenerated Boolean      @default(true) // Whether content should be AI-personalized
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  sequenceId  String
+  sequence    FollowUpSequence @relation(fields: [sequenceId], references: [id])
+
+  @@index([sequenceId, stepNumber])
+}
+
+enum FollowUpType {
+  EMAIL
+  LINKEDIN_MESSAGE
+  SMS
+  PHONE_REMINDER
+  SOCIAL_MEDIA_COMMENT
+}
+
+model SequenceEnrollment {
+  id              String    @id @default(cuid())
+  status          SequenceStatus @default(ACTIVE)
+  currentStep     Int       @default(0) // Which step they're on
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  pausedAt        DateTime?
+  cancelledAt     DateTime?
+  lastStepSentAt  DateTime?
+  nextStepDue     DateTime?
+  notes           String?
+
+  prospectId      String
+  prospect        Prospect  @relation(fields: [prospectId], references: [id])
+
+  sequenceId      String
+  sequence        FollowUpSequence @relation(fields: [sequenceId], references: [id])
+
+  @@index([status])
+  @@index([nextStepDue])
+  @@index([prospectId])
+  @@index([sequenceId])
+}
+
+enum SequenceStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  BOUNCED
+}
+
+model EmailTemplate {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  subject     String
+  body        String    // Template with placeholders
+  category    String?   // "initial_outreach", "follow_up", "proposal", etc.
+  active      Boolean   @default(true)
+  tags        String[]
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  agentId     String?
+  agent       Agent?    @relation(fields: [agentId], references: [id])
+
+  @@index([active])
+  @@index([category])
+  @@index([tags])
+}
