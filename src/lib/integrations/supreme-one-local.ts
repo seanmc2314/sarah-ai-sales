@@ -326,8 +326,8 @@ export class LocalSupremeOnePlatformService {
   private extractHTMLDescription(html: string): string {
     // Remove HTML tags and extract meaningful text
     const textContent = html
-      .replace(/<script[^>]*>.*?<\/script>/gis, '')
-      .replace(/<style[^>]*>.*?<\/style>/gis, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()

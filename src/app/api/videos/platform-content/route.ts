@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Generate script based on video type
     switch (videoType) {
       case 'social_media':
-        script = await sarah.generateContentWithPlatformData('video_script', topic, platformContent)
+        script = await sarah.generateContentWithSupremeOneData('video_script', topic, platformContent)
         break
 
       case 'prospect_personalized':
@@ -95,10 +95,11 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Prospect not found' }, { status: 404 })
         }
 
-        script = await sarah.createProspectingVideoScript(
-          prospect,
-          platformContent,
-          screenshots.map(s => s.filename)
+        script = await sarah.generateVideoScript(
+          `F&I Training for ${prospect.firstName} at ${prospect.company || 'your dealership'}`,
+          'linkedin',
+          90,
+          platformContent
         )
         break
 
@@ -202,15 +203,15 @@ export async function GET(request: NextRequest) {
         })
 
         const sarah = new SarahAI()
-        const analysis = await sarah.analyzeSupremeOneContent(platformContent)
+        const analysis = await sarah.analyzeSupremeOneROI(platformContent, {})
 
         return NextResponse.json({
           contentItems: platformContent.length,
           analysis,
           videoOpportunities: {
-            socialMediaPosts: analysis.recommendedPosts,
-            prospectingAngles: analysis.prospectingAngles,
-            keyTopics: analysis.keyTopics
+            improvements: analysis.improvements,
+            projectedROI: analysis.projectedROI,
+            trainingRecommendations: analysis.trainingRecommendations
           }
         })
 

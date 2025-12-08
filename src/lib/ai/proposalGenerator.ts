@@ -208,7 +208,7 @@ export async function saveProposal(
       title: proposalData.title,
       content: proposalData.content,
       personalizedPitch: proposalData.personalizedPitch,
-      roiCalculation: proposalData.roiCalculation,
+      roiCalculation: proposalData.roiCalculation as object | undefined,
       trainingProgram: 'Supreme One Training with Sarah AI',
       status: 'DRAFT',
       userId,

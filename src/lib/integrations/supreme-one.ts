@@ -147,7 +147,7 @@ export class SupremeOnePlatformService {
               .filter(href => !href.includes('?'))
           }, this.baseUrl)
 
-          links.forEach(link => urls.add(link))
+          links.forEach((link: string) => urls.add(link))
 
         } catch (error) {
           console.warn(`Could not access ${mainPage}:`, error)
@@ -349,7 +349,7 @@ export class SupremeOnePlatformService {
             }
 
             // Wait for any animations/changes
-            await page.waitForTimeout(1000)
+            await new Promise(resolve => setTimeout(resolve, 1000))
           }
 
           // Capture screenshot

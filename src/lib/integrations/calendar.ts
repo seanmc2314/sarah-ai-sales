@@ -34,10 +34,8 @@ export class CalendarService {
   constructor(accessToken: string) {
     this.accessToken = accessToken
     this.client = Client.init({
-      authProvider: {
-        getAccessToken: async () => {
-          return this.accessToken
-        }
+      authProvider: (done) => {
+        done(null, this.accessToken)
       }
     })
   }

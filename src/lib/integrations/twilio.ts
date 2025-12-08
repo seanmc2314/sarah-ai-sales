@@ -25,7 +25,7 @@ export class TwilioService {
       const call = await client.calls.create({
         url: twimlUrl,
         to: to,
-        from: process.env.TWILIO_FROM_NUMBER
+        from: process.env.TWILIO_FROM_NUMBER || ''
       })
       return call
     } catch (error) {

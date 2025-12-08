@@ -46,7 +46,7 @@ export function DialogTrigger({ children, asChild }: DialogTriggerProps) {
   const { setOpen } = context
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, {
+    return React.cloneElement(children as React.ReactElement<{ onClick?: () => void }>, {
       onClick: () => setOpen(true)
     })
   }

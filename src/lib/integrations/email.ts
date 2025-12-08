@@ -32,7 +32,7 @@ export class EmailService {
 
   constructor(config: EmailConfig) {
     this.config = config
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: config.host,
       port: config.port,
       secure: config.secure,
