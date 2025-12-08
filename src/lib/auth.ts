@@ -12,13 +12,17 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        console.log('Auth attempt for:', credentials?.email)
+
         if (!credentials?.email || !credentials?.password) {
+          console.error('Missing credentials')
           return null
         }
 
         try {
+          console.log('Looking up user in database...')
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
+            where: { email: credentials.email.toLowerCase().trim() }
           })
 
           if (!user) {
@@ -26,10 +30,14 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          console.log('User found, checking password...')
+
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
             user.password
           )
+
+          console.log('Password valid:', isPasswordValid)
 
           if (!isPasswordValid) {
             console.error('Invalid password for user:', credentials.email)
