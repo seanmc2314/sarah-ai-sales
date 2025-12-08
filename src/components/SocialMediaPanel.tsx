@@ -261,7 +261,7 @@ export default function SocialMediaPanel() {
                     <select
                       name="platform"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     >
                       <option value="">Select Platform</option>
                       <option value="LINKEDIN">LinkedIn</option>
@@ -281,7 +281,7 @@ export default function SocialMediaPanel() {
                       onChange={(e) => setPostContent(e.target.value)}
                       rows={6}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                       placeholder="Write your post content here..."
                     />
                   </div>
@@ -293,7 +293,7 @@ export default function SocialMediaPanel() {
                     <input
                       type="datetime-local"
                       name="scheduledAt"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     />
                   </div>
                 </div>
