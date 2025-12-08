@@ -52,6 +52,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error('Database auth error:', error)
+          console.error('DATABASE_URL exists:', !!process.env.DATABASE_URL)
           // Database not available - fail securely instead of hardcoded fallback
           return null
         }
