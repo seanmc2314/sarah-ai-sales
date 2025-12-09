@@ -10,7 +10,9 @@ export async function GET() {
   }
 
   // LinkedIn OAuth 2.0 authorization URL
-  const scope = 'openid profile email w_member_social'
+  // w_member_social from "Share on LinkedIn" product
+  // openid, profile, email from "Sign In with LinkedIn using OpenID Connect" product
+  const scope = 'openid profile w_member_social'
   const state = Math.random().toString(36).substring(7)
 
   const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization')
