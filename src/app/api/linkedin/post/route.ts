@@ -41,28 +41,26 @@ export async function POST(request: NextRequest) {
     const COMPANY_ID = '106558533'
     const organizationUrn = `urn:li:organization:${COMPANY_ID}`
 
-    // Try posting to company page using UGC Posts API (older but more permissive)
-    const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    // Use the newer Posts API (required for Advertising API / organization posts)
+    const postResponse = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${linkedInAccount.accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202401',
       },
       body: JSON.stringify({
         author: organizationUrn,
-        lifecycleState: 'PUBLISHED',
-        specificContent: {
-          'com.linkedin.ugc.ShareContent': {
-            shareCommentary: {
-              text: content
-            },
-            shareMediaCategory: 'NONE'
-          }
+        commentary: content,
+        visibility: 'PUBLIC',
+        distribution: {
+          feedDistribution: 'MAIN_FEED',
+          targetEntities: [],
+          thirdPartyDistributionChannels: []
         },
-        visibility: {
-          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-        }
+        lifecycleState: 'PUBLISHED',
+        isReshareDisabledByAuthor: false
       }),
     })
 
