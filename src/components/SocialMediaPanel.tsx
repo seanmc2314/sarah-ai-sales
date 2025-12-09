@@ -55,6 +55,20 @@ export default function SocialMediaPanel() {
     window.location.href = '/api/linkedin/auth'
   }
 
+  const disconnectLinkedIn = async () => {
+    try {
+      const response = await fetch('/api/linkedin/disconnect', {
+        method: 'POST'
+      })
+      if (response.ok) {
+        setLinkedInStatus({ connected: false })
+        setPublishMessage('LinkedIn disconnected. Please reconnect to get updated permissions.')
+      }
+    } catch (error) {
+      console.error('Error disconnecting LinkedIn:', error)
+    }
+  }
+
   const publishToLinkedIn = async () => {
     if (!postContent.trim()) {
       setPublishMessage('Please enter content to post')
@@ -182,7 +196,14 @@ export default function SocialMediaPanel() {
               )}
             </div>
           </div>
-          {!linkedInStatus.connected && (
+          {linkedInStatus.connected ? (
+            <button
+              onClick={disconnectLinkedIn}
+              className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+            >
+              Disconnect
+            </button>
+          ) : (
             <button
               onClick={connectLinkedIn}
               className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
