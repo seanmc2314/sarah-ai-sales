@@ -17,16 +17,78 @@ interface SocialPost {
   }
 }
 
+interface LinkedInStatus {
+  connected: boolean
+  linkedinName?: string
+  expiresAt?: string
+}
+
 export default function SocialMediaPanel() {
   const [posts, setPosts] = useState<SocialPost[]>([])
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all')
   const [postContent, setPostContent] = useState('')
   const [isGeneratingContent, setIsGeneratingContent] = useState(false)
+  const [linkedInStatus, setLinkedInStatus] = useState<LinkedInStatus>({ connected: false })
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [publishMessage, setPublishMessage] = useState('')
+  const [createPlatform, setCreatePlatform] = useState('')
 
   useEffect(() => {
     fetchPosts()
+    checkLinkedInStatus()
   }, [])
+
+  const checkLinkedInStatus = async () => {
+    try {
+      const response = await fetch('/api/linkedin/post')
+      if (response.ok) {
+        const data = await response.json()
+        setLinkedInStatus(data)
+      }
+    } catch (error) {
+      console.error('Error checking LinkedIn status:', error)
+    }
+  }
+
+  const connectLinkedIn = () => {
+    window.location.href = '/api/linkedin/auth'
+  }
+
+  const publishToLinkedIn = async () => {
+    if (!postContent.trim()) {
+      setPublishMessage('Please enter content to post')
+      return
+    }
+
+    setIsPublishing(true)
+    setPublishMessage('')
+
+    try {
+      const response = await fetch('/api/linkedin/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: postContent })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setPublishMessage('Successfully posted to LinkedIn!')
+        setPostContent('')
+        fetchPosts()
+        setShowCreateForm(false)
+      } else if (data.needsAuth) {
+        setPublishMessage('Please connect your LinkedIn account first')
+      } else {
+        setPublishMessage(data.error || 'Failed to post')
+      }
+    } catch (error) {
+      setPublishMessage('Failed to post to LinkedIn')
+    } finally {
+      setIsPublishing(false)
+    }
+  }
 
   const fetchPosts = async () => {
     try {
@@ -102,6 +164,33 @@ export default function SocialMediaPanel() {
         >
           Create Post
         </button>
+      </div>
+
+      {/* LinkedIn Connection Status */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-2xl">💼</span>
+            <div>
+              <h3 className="font-medium text-gray-900">LinkedIn Connection</h3>
+              {linkedInStatus.connected ? (
+                <p className="text-sm text-green-600">
+                  Connected as {linkedInStatus.linkedinName}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">Not connected</p>
+              )}
+            </div>
+          </div>
+          {!linkedInStatus.connected && (
+            <button
+              onClick={connectLinkedIn}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+            >
+              Connect LinkedIn
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Platform Filter */}
@@ -261,10 +350,12 @@ export default function SocialMediaPanel() {
                     <select
                       name="platform"
                       required
+                      value={createPlatform}
+                      onChange={(e) => setCreatePlatform(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     >
                       <option value="">Select Platform</option>
-                      <option value="LINKEDIN">LinkedIn</option>
+                      <option value="LINKEDIN">LinkedIn {linkedInStatus.connected ? '(Connected)' : ''}</option>
                       <option value="INSTAGRAM">Instagram</option>
                       <option value="FACEBOOK">Facebook</option>
                       <option value="YOUTUBE">YouTube</option>
@@ -298,10 +389,23 @@ export default function SocialMediaPanel() {
                   </div>
                 </div>
 
+                {publishMessage && (
+                  <div className={`p-3 rounded-md text-sm ${
+                    publishMessage.includes('Successfully')
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {publishMessage}
+                  </div>
+                )}
+
                 <div className="flex justify-end space-x-3 mt-6">
                   <button
                     type="button"
-                    onClick={() => setShowCreateForm(false)}
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      setPublishMessage('')
+                    }}
                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
                   >
                     Cancel
@@ -312,12 +416,25 @@ export default function SocialMediaPanel() {
                   >
                     Save as Draft
                   </button>
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Publish Now
-                  </button>
+                  {linkedInStatus.connected && createPlatform === 'LINKEDIN' && (
+                    <button
+                      type="button"
+                      onClick={publishToLinkedIn}
+                      disabled={isPublishing}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {isPublishing ? 'Publishing...' : 'Publish to LinkedIn'}
+                    </button>
+                  )}
+                  {!linkedInStatus.connected && createPlatform === 'LINKEDIN' && (
+                    <button
+                      type="button"
+                      onClick={connectLinkedIn}
+                      className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800"
+                    >
+                      Connect LinkedIn First
+                    </button>
+                  )}
                 </div>
               </form>
             </div>

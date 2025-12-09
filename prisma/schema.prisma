@@ -529,3 +529,16 @@ model EmailTemplate {
   @@index([category])
   @@index([tags])
 }
+
+model LinkedInAccount {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  accessToken   String
+  expiresAt     DateTime
+  linkedinId    String?
+  linkedinName  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+}
