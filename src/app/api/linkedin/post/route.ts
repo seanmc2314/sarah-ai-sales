@@ -37,44 +37,32 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Get user's LinkedIn ID for posting as personal profile
-    const userInfoResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${linkedInAccount.accessToken}`,
-      },
-    })
+    // Supreme One Company Page ID
+    const COMPANY_ID = '106558533'
+    const organizationUrn = `urn:li:organization:${COMPANY_ID}`
 
-    if (!userInfoResponse.ok) {
-      return NextResponse.json({
-        error: 'Failed to get LinkedIn profile',
-        needsAuth: true
-      }, { status: 401 })
-    }
-
-    const userInfo = await userInfoResponse.json()
-    const personUrn = `urn:li:person:${userInfo.sub}`
-
-    // Create the post using LinkedIn's Posts API - posting as personal profile
-    // Note: Posting to company pages requires w_organization_social scope and Advertising API access
-    const postResponse = await fetch('https://api.linkedin.com/v2/posts', {
+    // Try posting to company page using UGC Posts API (older but more permissive)
+    const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${linkedInAccount.accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202401',
       },
       body: JSON.stringify({
-        author: personUrn,
-        commentary: content,
-        visibility: 'PUBLIC',
-        distribution: {
-          feedDistribution: 'MAIN_FEED',
-          targetEntities: [],
-          thirdPartyDistributionChannels: []
-        },
+        author: organizationUrn,
         lifecycleState: 'PUBLISHED',
-        isReshareDisabledByAuthor: false
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: {
+              text: content
+            },
+            shareMediaCategory: 'NONE'
+          }
+        },
+        visibility: {
+          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+        }
       }),
     })
 
