@@ -22,3 +22,4 @@ export async function GET() {
 
   return NextResponse.redirect(authUrl.toString())
 }
+// LinkedIn integration v1
