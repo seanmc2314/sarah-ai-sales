@@ -150,6 +150,24 @@ export default function SocialMediaPanel() {
     }
   }
 
+  const deletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/social-posts/${postId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        fetchPosts()
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error)
+    }
+  }
+
   const platformIcons = {
     LINKEDIN: '💼',
     INSTAGRAM: '📸',
@@ -291,7 +309,7 @@ export default function SocialMediaPanel() {
               </div>
             )}
 
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               {post.status === 'DRAFT' && (
                 <button
                   onClick={() => publishPost(post.id)}
@@ -307,6 +325,12 @@ export default function SocialMediaPanel() {
               )}
               <button className="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700">
                 Edit
+              </button>
+              <button
+                onClick={() => deletePost(post.id)}
+                className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+              >
+                Delete
               </button>
             </div>
           </div>
