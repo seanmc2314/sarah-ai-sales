@@ -40,9 +40,10 @@ export async function POST(request: NextRequest) {
     // Supreme One Company Page ID
     const COMPANY_ID = '106558533'
     const organizationUrn = `urn:li:organization:${COMPANY_ID}`
+    const personUrn = `urn:li:person:${linkedInAccount.linkedinId}`
 
-    // Use the newer Posts API (required for Advertising API / organization posts)
-    const postResponse = await fetch('https://api.linkedin.com/rest/posts', {
+    // Try posting to company page first
+    let postResponse = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${linkedInAccount.accessToken}`,
@@ -64,9 +65,22 @@ export async function POST(request: NextRequest) {
       }),
     })
 
+    let postedTo = 'company'
+
+    // If company page fails (403 = not admin), return specific error
     if (!postResponse.ok) {
       const errorText = await postResponse.text()
-      console.error('LinkedIn post error:', errorText)
+      console.error('LinkedIn company post error:', errorText)
+
+      // Check if it's an access denied error
+      if (postResponse.status === 403) {
+        return NextResponse.json({
+          error: 'You need to be an admin of the Supreme One LinkedIn page to post. Please ask the page owner to add you as an admin.',
+          details: errorText,
+          needsAdmin: true
+        }, { status: 403 })
+      }
+
       return NextResponse.json({
         error: 'Failed to post to LinkedIn',
         details: errorText
