@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard?linkedin=connected', request.url))
   } catch (err) {
     console.error('LinkedIn callback error:', err)
-    return NextResponse.redirect(new URL('/dashboard?linkedin=error', request.url))
+    const errorMessage = err instanceof Error ? err.message : 'unknown'
+    return NextResponse.redirect(new URL(`/dashboard?linkedin=error&details=${encodeURIComponent(errorMessage)}`, request.url))
   }
 }
