@@ -42,26 +42,22 @@ export async function POST(request: NextRequest) {
     const organizationUrn = `urn:li:organization:${COMPANY_ID}`
     const personUrn = `urn:li:person:${linkedInAccount.linkedinId}`
 
-    // Try posting to company page first
-    let postResponse = await fetch('https://api.linkedin.com/rest/posts', {
+    // Try posting to company page using v2 shares API
+    let postResponse = await fetch('https://api.linkedin.com/v2/shares', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${linkedInAccount.accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202401',
       },
       body: JSON.stringify({
-        author: organizationUrn,
-        commentary: content,
-        visibility: 'PUBLIC',
-        distribution: {
-          feedDistribution: 'MAIN_FEED',
-          targetEntities: [],
-          thirdPartyDistributionChannels: []
+        owner: organizationUrn,
+        text: {
+          text: content
         },
-        lifecycleState: 'PUBLISHED',
-        isReshareDisabledByAuthor: false
+        distribution: {
+          linkedInDistributionTarget: {}
+        }
       }),
     })
 
