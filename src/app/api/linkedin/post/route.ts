@@ -37,24 +37,11 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Get user's LinkedIn ID (sub from userinfo)
-    const userInfoResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${linkedInAccount.accessToken}`,
-      },
-    })
+    // Supreme One Company Page ID
+    const COMPANY_ID = '106558533'
+    const organizationUrn = `urn:li:organization:${COMPANY_ID}`
 
-    if (!userInfoResponse.ok) {
-      return NextResponse.json({
-        error: 'Failed to get LinkedIn profile',
-        needsAuth: true
-      }, { status: 401 })
-    }
-
-    const userInfo = await userInfoResponse.json()
-    const personUrn = `urn:li:person:${userInfo.sub}`
-
-    // Create the post using LinkedIn's Posts API
+    // Create the post using LinkedIn's Posts API - posting as the company page
     const postResponse = await fetch('https://api.linkedin.com/v2/posts', {
       method: 'POST',
       headers: {
@@ -64,7 +51,7 @@ export async function POST(request: NextRequest) {
         'LinkedIn-Version': '202401',
       },
       body: JSON.stringify({
-        author: personUrn,
+        author: organizationUrn,
         commentary: content,
         visibility: 'PUBLIC',
         distribution: {
