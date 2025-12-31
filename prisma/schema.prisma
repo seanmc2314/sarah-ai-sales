@@ -13,14 +13,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ContactRole {
+  OWNER           // Dealer Principal / Owner
+  GM              // General Manager
+  GSM             // General Sales Manager
+  F_AND_I_DIRECTOR // F&I Director
+  F_AND_I_MANAGER // F&I Manager
+  SALES_MANAGER   // Sales Manager
+  SERVICE_MANAGER // Service Manager
+  CONTROLLER      // Controller / CFO
+  OTHER           // Other
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  territories Territory[]
+}
+
+model Territory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  states      String[] // Array of state codes: ["TX", "OK", "LA"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+
+  users       User[]
+  dealerships Dealership[] @relation("TerritoryDealerships")
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
   password      String
-  role          String    @default("admin")
+  role          UserRole  @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Company & Territory
+  companyId     String?
+  company       Company?    @relation(fields: [companyId], references: [id])
+  territoryId   String?
+  territory     Territory?  @relation(fields: [territoryId], references: [id])
+
+  // Password Reset
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  mustChangePassword   Boolean   @default(false)
 
   // Social Media Credentials
   linkedinEmail     String?
@@ -59,6 +113,14 @@ model User {
   followUpSequences FollowUpSequence[]
   emailTemplates   EmailTemplate[]
   agents           Agent[]
+
+  // CRM Relations
+  assignedDealerships Dealership[]
+  deals               Deal[]
+  activities          Activity[]
+  uploadedDocuments   Document[]
+  assignedTasks       Task[]       @relation("TaskAssignee")
+  createdTasks        Task[]       @relation("TaskCreator")
 }
 
 model Agent {
@@ -541,4 +603,362 @@ model LinkedInAccount {
   updatedAt     DateTime  @updatedAt
 
   @@index([userId])
+}
+
+// ============= CRM MODELS =============
+
+model Dealership {
+  id                String            @id @default(cuid())
+  name              String
+  legalName         String?
+  status            DealershipStatus  @default(PROSPECT)
+  website           String?
+  phone             String?
+  email             String?
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  country           String            @default("USA")
+
+  // Business info
+  dealerGroup       String?           // Parent company if part of group
+  brands            String[]          // ["Toyota", "Honda", etc.]
+  employeeCount     Int?
+  annualRevenue     String?
+  fiManagerCount    Int?
+
+  // Relationship tracking
+  customerSince     DateTime?
+  churnedAt         DateTime?
+  contractEndDate   DateTime?
+
+  // Agreement details
+  monthlyValue      Float?            // Monthly contract value
+  contractType      String?           // "training_only", "full_service", etc.
+
+  // Live customer indicator
+  isLive            Boolean           @default(false)
+  liveActivatedAt   DateTime?
+
+  // Notes and metadata
+  notes             String?
+  tags              String[]
+  metadata          Json?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  contacts          Contact[]
+  deals             Deal[]
+  activities        Activity[]
+  documents         Document[]
+  tasks             Task[]
+
+  // Ownership
+  assignedUserId    String?
+  assignedUser      User?             @relation(fields: [assignedUserId], references: [id])
+
+  // Territory
+  territoryId       String?
+  territory         Territory?        @relation("TerritoryDealerships", fields: [territoryId], references: [id])
+
+  @@index([status])
+  @@index([isLive])
+  @@index([assignedUserId])
+  @@index([territoryId])
+  @@index([name])
+}
+
+enum DealershipStatus {
+  PROSPECT
+  QUALIFIED
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  NEGOTIATION
+  ACTIVE_CUSTOMER
+  CHURNED
+  DO_NOT_CONTACT
+}
+
+model Contact {
+  id                String          @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  mobile            String?
+  role              ContactRole     @default(OTHER)
+  position          String?         // Custom title if role doesn't fit
+  department        String?
+  isPrimary         Boolean         @default(false)
+
+  // Social profiles
+  linkedinUrl       String?
+  facebookUrl       String?
+  twitterUrl        String?
+
+  // AI Lead scoring
+  leadScore         Int             @default(0)
+  leadScoreReason   String?
+  scoredAt          DateTime?
+
+  // Communication preferences
+  preferredChannel  String?         // "email", "phone", "linkedin"
+  timezone          String?
+  doNotContact      Boolean         @default(false)
+
+  notes             String?
+  tags              String[]
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  dealershipId      String?
+  dealership        Dealership?     @relation(fields: [dealershipId], references: [id])
+
+  activities        Activity[]
+  deals             Deal[]
+  tasks             Task[]
+
+  // Link to legacy Prospect if migrated
+  legacyProspectId  String?
+
+  @@index([dealershipId])
+  @@index([leadScore])
+  @@index([email])
+}
+
+model Deal {
+  id                String          @id @default(cuid())
+  title             String
+  value             Float           @default(0)
+  monthlyRecurring  Float?          // MRR for subscription deals
+
+  // Pipeline stages
+  stage             DealStage       @default(LEAD)
+  probability       Int             @default(10)   // 0-100%
+
+  // Expected close
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+
+  // Deal details
+  dealType          String?         // "new_business", "upsell", "renewal"
+  source            String?         // "website", "referral", "cold_outreach"
+  lostReason        String?
+
+  notes             String?
+  tags              String[]
+  metadata          Json?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  closedAt          DateTime?
+
+  // Relations
+  dealershipId      String
+  dealership        Dealership      @relation(fields: [dealershipId], references: [id])
+
+  contactId         String?
+  contact           Contact?        @relation(fields: [contactId], references: [id])
+
+  ownerId           String
+  owner             User            @relation(fields: [ownerId], references: [id])
+
+  activities        Activity[]
+  tasks             Task[]
+
+  @@index([stage])
+  @@index([ownerId])
+  @@index([dealershipId])
+  @@index([expectedCloseDate])
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model Activity {
+  id                String          @id @default(cuid())
+  type              ActivityType
+  subject           String
+  description       String?
+
+  // For calls/meetings
+  duration          Int?            // in minutes
+  outcome           String?         // "connected", "voicemail", "no_answer"
+
+  // For emails
+  emailSubject      String?
+  emailContent      String?
+  emailSentAt       DateTime?
+  emailOpenedAt     DateTime?
+  emailClickedAt    DateTime?
+
+  // AI interaction specific
+  aiPrompt          String?
+  aiResponse        String?
+  aiModel           String?
+
+  // Timestamps
+  scheduledAt       DateTime?
+  completedAt       DateTime?
+
+  notes             String?
+  metadata          Json?
+
+  createdAt         DateTime        @default(now())
+
+  // Relations
+  dealershipId      String?
+  dealership        Dealership?     @relation(fields: [dealershipId], references: [id])
+
+  contactId         String?
+  contact           Contact?        @relation(fields: [contactId], references: [id])
+
+  dealId            String?
+  deal              Deal?           @relation(fields: [dealId], references: [id])
+
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+
+  @@index([type])
+  @@index([dealershipId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  CALL_OUTBOUND
+  CALL_INBOUND
+  MEETING
+  NOTE
+  LINKEDIN_MESSAGE
+  LINKEDIN_CONNECTION
+  AI_INTERACTION
+  TASK_COMPLETED
+  STATUS_CHANGE
+  DOCUMENT_UPLOAD
+  SOCIAL_POST
+}
+
+model Document {
+  id                String           @id @default(cuid())
+  name              String
+  originalName      String
+  description       String?
+
+  // File info
+  filePath          String           // Local path: /uploads/documents/{dealershipId}/{filename}
+  fileSize          Int              // bytes
+  mimeType          String
+  fileExtension     String
+
+  // Categorization
+  category          DocumentCategory
+  tags              String[]
+
+  // For agreements/contracts
+  validFrom         DateTime?
+  validUntil        DateTime?
+  signedAt          DateTime?
+  signedBy          String?
+
+  // Future S3 migration
+  s3Key             String?
+  s3Bucket          String?
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  dealershipId      String
+  dealership        Dealership       @relation(fields: [dealershipId], references: [id])
+
+  uploadedById      String
+  uploadedBy        User             @relation(fields: [uploadedById], references: [id])
+
+  @@index([dealershipId])
+  @@index([category])
+}
+
+enum DocumentCategory {
+  AGREEMENT
+  CONTRACT
+  PROPOSAL
+  INVOICE
+  NDA
+  TRAINING_MATERIAL
+  REPORT
+  OTHER
+}
+
+model Task {
+  id                String          @id @default(cuid())
+  title             String
+  description       String?
+
+  // Timing
+  dueDate           DateTime?
+  dueTime           String?         // "09:00"
+  reminderAt        DateTime?
+
+  // Status
+  priority          TaskPriority    @default(MEDIUM)
+  status            TaskStatus      @default(PENDING)
+  completedAt       DateTime?
+
+  // Categorization
+  taskType          String?         // "follow_up", "call", "email", "meeting"
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  dealershipId      String?
+  dealership        Dealership?     @relation(fields: [dealershipId], references: [id])
+
+  contactId         String?
+  contact           Contact?        @relation(fields: [contactId], references: [id])
+
+  dealId            String?
+  deal              Deal?           @relation(fields: [dealId], references: [id])
+
+  assignedToId      String
+  assignedTo        User            @relation("TaskAssignee", fields: [assignedToId], references: [id])
+
+  createdById       String
+  createdBy         User            @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([assignedToId])
+  @@index([dealershipId])
+  @@index([priority])
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }

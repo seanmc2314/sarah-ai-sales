@@ -22,7 +22,7 @@ export default function HomePage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-red-50">
       <div className="text-center">
         <div className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-red-600 bg-clip-text text-transparent mb-4">
-          Sarah AI
+          Supreme One CRM
         </div>
         <div className="text-gray-600">Loading...</div>
       </div>

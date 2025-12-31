@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sarah AI - F&I Sales Automation Platform",
-  description: "The most advanced AI-powered sales automation platform for Finance & Insurance professionals. Generate personalized videos, automate email campaigns, and leverage Supreme One F&I expertise.",
+  title: "Supreme One CRM - AI-Powered Dealer Services",
+  description: "The complete CRM platform for Supreme One Dealer Services. Manage dealerships, track deals, automate outreach with Sarah AI, and grow your training business.",
 };
 
 export default function RootLayout({

@@ -9,6 +9,11 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSuccess, setForgotSuccess] = useState(false)
+  const [forgotError, setForgotError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -35,13 +40,55 @@ export default function SignInPage() {
       if (result?.error) {
         setError('Invalid email or password')
       } else {
-        router.push('/dashboard')
+        // Check if user needs to change password
+        const checkRes = await fetch('/api/auth/check-password-status')
+        const checkData = await checkRes.json()
+
+        if (checkData.mustChangePassword) {
+          router.push('/auth/change-password')
+        } else {
+          router.push('/dashboard')
+        }
       }
     } catch (error) {
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    setForgotError('')
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setForgotError(data.error || 'Failed to send reset email')
+        return
+      }
+
+      setForgotSuccess(true)
+    } catch (err) {
+      setForgotError('Something went wrong. Please try again.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false)
+    setForgotEmail('')
+    setForgotSuccess(false)
+    setForgotError('')
   }
 
   return (
@@ -84,17 +131,17 @@ export default function SignInPage() {
             color: '#111827',
             marginBottom: '0.5rem'
           }}>
-            SarahAI Training
+            Supreme One CRM
           </h1>
           <p style={{ color: '#6b7280' }}>
-            Sign in to access your training dashboard
+            Sign in to access your CRM dashboard
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
           <div style={{
-            background: '#fee',
+            background: '#fee2e2',
             color: '#dc2626',
             padding: '0.75rem',
             borderRadius: '0.5rem',
@@ -120,7 +167,7 @@ export default function SignInPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@dealership.com"
+              placeholder="you@supremeone.net"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -218,17 +265,19 @@ export default function SignInPage() {
 
         {/* Forgot Password */}
         <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            color: '#1e40af',
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            transition: 'color 0.3s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.color = '#dc2626'}
-          onMouseOut={(e) => e.currentTarget.style.color = '#1e40af'}
+          <button
+            onClick={() => setShowForgotPassword(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#1e40af',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              transition: 'color 0.3s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.color = '#dc2626'}
+            onMouseOut={(e) => e.currentTarget.style.color = '#1e40af'}
           >
             Forgot Password?
           </button>
@@ -241,9 +290,158 @@ export default function SignInPage() {
           color: '#6b7280',
           fontSize: '0.875rem'
         }}>
-          © 2024 Supreme One. All rights reserved.
+          © {new Date().getFullYear()} Supreme One. All rights reserved.
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '1rem',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            width: '100%',
+            maxWidth: '400px',
+            padding: '2rem'
+          }}>
+            {forgotSuccess ? (
+              <>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem'
+                  }}>
+                    <svg width="30" height="30" fill="white" viewBox="0 0 24 24">
+                      <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                  </div>
+                  <h2 style={{ color: '#111827', marginBottom: '0.5rem' }}>Check Your Email</h2>
+                  <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+                    If an account exists with <strong>{forgotEmail}</strong>, we have sent a temporary password.
+                  </p>
+                  <button
+                    onClick={closeForgotPassword}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #1e40af, #dc2626)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h2 style={{ color: '#111827', margin: 0 }}>Reset Password</h2>
+                  <button
+                    onClick={closeForgotPassword}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '1.5rem',
+                      cursor: 'pointer',
+                      color: '#6b7280'
+                    }}
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+                  Enter your email address and we will send you a temporary password.
+                </p>
+
+                {forgotError && (
+                  <div style={{
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1rem'
+                  }}>
+                    {forgotError}
+                  </div>
+                )}
+
+                <form onSubmit={handleForgotPassword}>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      color: '#111827',
+                      fontWeight: 500
+                    }}>
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@supremeone.net"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        fontSize: '1rem',
+                        color: '#111827',
+                        backgroundColor: '#ffffff'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #1e40af, #dc2626)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      cursor: forgotLoading ? 'not-allowed' : 'pointer',
+                      opacity: forgotLoading ? 0.5 : 1
+                    }}
+                  >
+                    {forgotLoading ? 'Sending...' : 'Send Temporary Password'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Keyframes for spinner animation */}
       <style jsx>{`
